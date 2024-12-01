@@ -30,9 +30,11 @@ dependencies:
   flutter:
     sdk: flutter
   intl: ^0.17.0  # Pindahkan intl ke sini
-  sqflite: ^2.0.0+4
-  path: ^1.8.0
-  sqflite_common_ffi: ^2.0.0+1
+  hive: ^2.0.0
+  hive_flutter: ^1.1.0
+  path_provider: ^2.0.1
+
+  
 
 
 

@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart'; // Impor untuk TextInputFormatter dan FilteringTextInputFormatter
+import 'package:intl/intl.dart'; // Impor untuk NumberFormat
 import 'package:hive/hive.dart';
 import 'package:hive_flutter/hive_flutter.dart';
-import 'database/database_helper.dart'; // Impor DatabaseHelper
 import 'accounts_page.dart'; // Impor AccountsPage
 
 void main() async {
@@ -237,11 +238,13 @@ class _MyHomePageState extends State<MyHomePage> {
         title: Text(widget.title),
       ),
       body: _buildBody(),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _showAddTransactionDialog,
-        tooltip: 'Add Transaction',
-        child: const Icon(Icons.add),
-      ),
+      floatingActionButton: _selectedIndex == 0
+          ? FloatingActionButton(
+              onPressed: _showAddTransactionDialog,
+              tooltip: 'Add Transaction',
+              child: const Icon(Icons.add),
+            )
+          : null,
       bottomNavigationBar: BottomNavigationBar(
         items: const <BottomNavigationBarItem>[
           BottomNavigationBarItem(
