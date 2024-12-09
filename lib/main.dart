@@ -9,6 +9,8 @@ void main() async {
   // Inisialisasi Hive
   await Hive.initFlutter();
   await Hive.openBox('transactions');
+  await Hive.openBox('categories');
+  await Hive.openBox('accounts');
 
   runApp(const MyApp());
 }
@@ -49,12 +51,21 @@ class _MyHomePageState extends State<MyHomePage> {
   String _transactionType = 'Expense'; // Default transaction type
   final List<Map<String, String>> _transactions = [];
   final Box _transactionBox = Hive.box('transactions');
+  final Box _categoryBox = Hive.box('categories');
+  final Box _accountBox = Hive.box('accounts');
+  List<String> _categories = ['Food', 'Social Life', 'Transportation'];
+  List<String> _accounts = [];
 
   @override
   void initState() {
     super.initState();
-    _dateController.text = DateTime.now().toLocal().toString().split(' ')[0]; // Set initial date to today
+    _dateController.text = DateTime.now()
+        .toLocal()
+        .toString()
+        .split(' ')[0]; // Set initial date to today
     _loadTransactions();
+    _loadCategories();
+    _loadAccounts();
   }
 
   void _incrementCounter() {
@@ -88,11 +99,55 @@ class _MyHomePageState extends State<MyHomePage> {
     setState(() {
       _transactions.clear();
       _transactions.addAll(data.cast<Map<String, String>>());
-      print('Transactions loaded: $_transactions'); // Log untuk memastikan data dimuat
+      print(
+          'Transactions loaded: $_transactions'); // Log untuk memastikan data dimuat
     });
   }
 
-  void _showAddTransactionDialog() {
+  Future<void> _loadCategories() async {
+    final data = _categoryBox.values.toList();
+    setState(() {
+      _categories.addAll(data.cast<String>());
+      print(
+          'Categories loaded: $_categories'); // Log untuk memastikan data dimuat
+    });
+  }
+
+  Future<void> _loadAccounts() async {
+    final data = _accountBox.values.toList();
+    setState(() {
+      _accounts.clear();
+      _accounts.addAll(data.cast<Map<String, String>>().map((account) => account['type']!));
+      print(
+          'Accounts loaded: $_accounts'); // Log untuk memastikan data dimuat
+    });
+  }
+
+  void _showAddTransactionDialog() async {
+    await _loadAccounts(); // Ensure accounts are loaded before showing the dialog
+
+    if (_accounts.isEmpty) {
+      // Show a message if no accounts are available
+      showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: const Text('No Accounts Available'),
+            content: const Text('Please add an account first.'),
+            actions: <Widget>[
+              TextButton(
+                child: const Text('OK'),
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
+              ),
+            ],
+          );
+        },
+      );
+      return;
+    }
+
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -108,7 +163,9 @@ class _MyHomePageState extends State<MyHomePage> {
                       children: <Widget>[
                         ElevatedButton(
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: _transactionType == 'Expense' ? Colors.red : Colors.grey,
+                            backgroundColor: _transactionType == 'Expense'
+                                ? Colors.red
+                                : Colors.grey,
                           ),
                           onPressed: () {
                             setState(() {
@@ -119,7 +176,9 @@ class _MyHomePageState extends State<MyHomePage> {
                         ),
                         ElevatedButton(
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: _transactionType == 'Income' ? Colors.green : Colors.grey,
+                            backgroundColor: _transactionType == 'Income'
+                                ? Colors.green
+                                : Colors.grey,
                           ),
                           onPressed: () {
                             setState(() {
@@ -150,17 +209,56 @@ class _MyHomePageState extends State<MyHomePage> {
                         ThousandsSeparatorInputFormatter(),
                       ],
                     ),
-                    TextField(
-                      controller: _categoryController,
+                    DropdownButtonFormField<String>(
+                      value: _categories.isNotEmpty ? _categories[0] : null,
                       decoration: const InputDecoration(
                         labelText: 'Category',
                       ),
+                      items: _categories.map((String category) {
+                        return DropdownMenuItem<String>(
+                          value: category,
+                          child: Text(category),
+                        );
+                      }).toList(),
+                      onChanged: (String? newValue) {
+                        setState(() {
+                          _categoryController.text = newValue!;
+                        });
+                      },
                     ),
                     TextField(
-                      controller: _accountController,
+                      controller: _categoryController,
+                      decoration: const InputDecoration(
+                        labelText: 'Add New Category',
+                      ),
+                      onSubmitted: (String newCategory) async {
+                        if (newCategory.isNotEmpty &&
+                            !_categories.contains(newCategory)) {
+                          setState(() {
+                            _categories.add(newCategory);
+                          });
+                          await _categoryBox.add(newCategory);
+                          print(
+                              'Category added: $newCategory'); // Log untuk memastikan kategori ditambahkan
+                        }
+                      },
+                    ),
+                    DropdownButtonFormField<String>(
+                      value: _accounts.isNotEmpty ? _accounts[0] : null,
                       decoration: const InputDecoration(
                         labelText: 'Account',
                       ),
+                      items: _accounts.map((String account) {
+                        return DropdownMenuItem<String>(
+                          value: account,
+                          child: Text(account),
+                        );
+                      }).toList(),
+                      onChanged: (String? newValue) {
+                        setState(() {
+                          _accountController.text = newValue!;
+                        });
+                      },
                     ),
                     TextField(
                       controller: _noteController,
@@ -190,7 +288,8 @@ class _MyHomePageState extends State<MyHomePage> {
                       'note': _noteController.text,
                     };
                     await _transactionBox.add(transaction);
-                    print('Transaction saved: $transaction'); // Log untuk memastikan data disimpan
+                    print(
+                        'Transaction saved: $transaction'); // Log untuk memastikan data disimpan
                     await _loadTransactions(); // Muat ulang data setelah menyimpan transaksi baru
                     Navigator.of(context).pop();
                   },
@@ -210,13 +309,15 @@ class _MyHomePageState extends State<MyHomePage> {
           itemCount: _transactions.length,
           itemBuilder: (context, index) {
             final transaction = _transactions[index];
-            final color = transaction['type'] == 'Expense' ? Colors.red : Colors.green;
+            final color =
+                transaction['type'] == 'Expense' ? Colors.red : Colors.green;
             return ListTile(
               title: Text(
                 '${transaction['type']} - ${transaction['amount']}',
                 style: TextStyle(color: color),
               ),
-              subtitle: Text('${transaction['date']} - ${transaction['category']} - ${transaction['account']}'),
+              subtitle: Text(
+                  '${transaction['date']} - ${transaction['category']} - ${transaction['account']}'),
               trailing: Text(transaction['note'] ?? ''),
             );
           },
@@ -272,13 +373,15 @@ class ThousandsSeparatorInputFormatter extends TextInputFormatter {
   final NumberFormat _formatter = NumberFormat.decimalPattern('en');
 
   @override
-  TextEditingValue formatEditUpdate(TextEditingValue oldValue, TextEditingValue newValue) {
+  TextEditingValue formatEditUpdate(
+      TextEditingValue oldValue, TextEditingValue newValue) {
     if (newValue.text.isEmpty) {
       return newValue.copyWith(text: '');
     }
 
     final int selectionIndex = newValue.selection.end;
-    final String formattedText = _formatter.format(int.parse(newValue.text.replaceAll(',', '')));
+    final String formattedText =
+        _formatter.format(int.parse(newValue.text.replaceAll(',', '')));
     return TextEditingValue(
       text: formattedText,
       selection: TextSelection.collapsed(offset: selectionIndex),

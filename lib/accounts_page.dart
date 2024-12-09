@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart'; // Impor untuk TextInputFormatter dan FilteringTextInputFormatter
 import 'package:intl/intl.dart'; // Impor untuk NumberFormat
+import 'package:hive/hive.dart';
 
 class AccountsPage extends StatefulWidget {
   const AccountsPage({super.key});
@@ -12,8 +13,26 @@ class AccountsPage extends StatefulWidget {
 class _AccountsPageState extends State<AccountsPage> {
   String _selectedAccountType = 'Bank'; // Default account type
   final TextEditingController _amountController = TextEditingController();
-  final List<Map<String, String>> _accounts =
-      []; // Daftar untuk menyimpan data akun
+  final TextEditingController _newAccountTypeController = TextEditingController();
+  final List<Map<String, String>> _accounts = []; // Daftar untuk menyimpan data akun
+  final Box _transactionBox = Hive.box('transactions');
+  final Box _accountBox = Hive.box('accounts');
+  final List<String> _accountTypes = ['Bank', 'Cash']; // Daftar jenis akun yang tersedia
+
+  @override
+  void initState() {
+    super.initState();
+    _loadAccounts();
+  }
+
+  Future<void> _loadAccounts() async {
+    final data = _accountBox.values.toList();
+    setState(() {
+      _accounts.clear();
+      _accounts.addAll(data.cast<Map<String, String>>());
+      print('Accounts loaded: $_accounts'); // Log untuk memastikan data dimuat
+    });
+  }
 
   void _showAddAccountDialog() {
     showDialog(
@@ -33,13 +52,27 @@ class _AccountsPageState extends State<AccountsPage> {
                           _selectedAccountType = newValue!;
                         });
                       },
-                      items: <String>['Bank', 'Cash']
-                          .map<DropdownMenuItem<String>>((String value) {
+                      items: _accountTypes.map<DropdownMenuItem<String>>((String value) {
                         return DropdownMenuItem<String>(
                           value: value,
                           child: Text(value),
                         );
                       }).toList(),
+                    ),
+                    TextField(
+                      controller: _newAccountTypeController,
+                      decoration: const InputDecoration(
+                        labelText: 'New Account Type',
+                      ),
+                      onSubmitted: (String newAccountType) {
+                        if (newAccountType.isNotEmpty && !_accountTypes.contains(newAccountType)) {
+                          setState(() {
+                            _accountTypes.add(newAccountType);
+                            _selectedAccountType = newAccountType;
+                            _newAccountTypeController.clear();
+                          });
+                        }
+                      },
                     ),
                     TextField(
                       controller: _amountController,
@@ -65,13 +98,42 @@ class _AccountsPageState extends State<AccountsPage> {
                 ),
                 TextButton(
                   child: const Text('Save'),
-                  onPressed: () {
-                    setState(() {
-                      _accounts.add({
-                        'type': _selectedAccountType,
-                        'amount': _amountController.text,
+                  onPressed: () async {
+                    final amount = int.parse(_amountController.text.replaceAll(',', ''));
+                    final existingAccountIndex = _accounts.indexWhere((account) => account['type'] == _selectedAccountType);
+
+                    if (existingAccountIndex != -1) {
+                      // Akumulasi jumlah jika akun sudah ada
+                      setState(() {
+                        _accounts[existingAccountIndex]['amount'] = (int.parse(_accounts[existingAccountIndex]['amount']!) + amount).toString();
                       });
-                    });
+                      await _accountBox.putAt(existingAccountIndex, _accounts[existingAccountIndex]);
+                    } else {
+                      // Tambahkan akun baru jika belum ada
+                      final account = {
+                        'type': _selectedAccountType,
+                        'amount': amount.toString(),
+                      };
+                      setState(() {
+                        _accounts.add(account);
+                      });
+                      await _accountBox.add(account);
+                    }
+
+                    _amountController.clear(); // Clear the controller
+
+                    // Add the account as an income transaction
+                    final transaction = {
+                      'type': 'Income',
+                      'date': DateTime.now().toLocal().toString().split(' ')[0],
+                      'amount': amount.toString(),
+                      'category': 'Account',
+                      'account': _selectedAccountType,
+                      'note': 'Initial deposit',
+                    };
+                    await _transactionBox.add(transaction);
+                    print('Transaction saved: $transaction'); // Log untuk memastikan data disimpan
+
                     Navigator.of(context).pop();
                   },
                 ),
