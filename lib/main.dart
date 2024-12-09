@@ -4,6 +4,7 @@ import 'package:intl/intl.dart'; // Impor untuk NumberFormat
 import 'package:hive/hive.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'accounts_page.dart'; // Impor AccountsPage
+import 'summary_page.dart'; // Impor SummaryPage
 
 void main() async {
   // Inisialisasi Hive
@@ -325,7 +326,7 @@ class _MyHomePageState extends State<MyHomePage> {
       case 1:
         return const AccountsPage(); // Gunakan AccountsPage di sini
       case 2:
-        return const Center(child: Text('Summary Page'));
+        return SummaryPage(transactions: _transactions); // Gunakan SummaryPage di sini
       default:
         return const Center(child: Text('Page not found'));
     }
