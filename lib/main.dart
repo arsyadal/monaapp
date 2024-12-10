@@ -3,10 +3,12 @@ import 'package:flutter/services.dart'; // Impor untuk TextInputFormatter dan Fi
 import 'package:intl/intl.dart'; // Impor untuk NumberFormat
 import 'package:hive/hive.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:path_provider/path_provider.dart'; // Impor untuk path_provider
 import 'accounts_page.dart'; // Impor AccountsPage
 import 'summary_page.dart'; // Impor SummaryPage
 
 void main() async {
+  WidgetsFlutterBinding.ensureInitialized(); // Tambahkan ini untuk memastikan plugin diinisialisasi dengan benar
   // Inisialisasi Hive
   await Hive.initFlutter();
   await Hive.openBox('transactions');
