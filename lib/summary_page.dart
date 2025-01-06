@@ -13,9 +13,10 @@ class SummaryPage extends StatelessWidget {
       // Buat file Excel
       var excel = Excel.createExcel();
       Sheet sheetObject = excel['Sheet1'];
-      
+
       // Tambahkan header
-      sheetObject.appendRow(['Date', 'Type', 'Amount', 'Category', 'Account', 'Note']);
+      sheetObject
+          .appendRow(['Date', 'Type', 'Amount', 'Category', 'Account', 'Note']);
 
       // Tambahkan data transaksi
       for (var transaction in transactions) {
@@ -31,14 +32,16 @@ class SummaryPage extends StatelessWidget {
 
       // Konversi Excel ke bytes
       List<int>? fileBytes = excel.encode();
-      
+
       if (fileBytes != null) {
         // Buat Blob untuk file Excel
-        final blob = html.Blob([fileBytes], 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-        
+        final blob = html.Blob([
+          fileBytes
+        ], 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+
         // Buat URL untuk download
         final url = html.Url.createObjectUrlFromBlob(blob);
-        
+
         // Buat elemen anchor untuk download
         final anchor = html.AnchorElement(href: url)
           ..setAttribute('download', 'transactions.xlsx')
@@ -120,9 +123,7 @@ class SummaryPage extends StatelessWidget {
     print('Category Expenses: $categoryExpenses');
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Summary Page'),
-      ),
+    
       body: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.all(16.0),

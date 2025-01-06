@@ -14,10 +14,10 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    _loadResources();
+    _initializeApp();
   }
 
-  Future<void> _loadResources() async {
+  Future<void> _initializeApp() async {
     // Inisialisasi Hive
     await Hive.initFlutter();
     await Hive.openBox('transactions');
@@ -27,9 +27,9 @@ class _SplashScreenState extends State<SplashScreen> {
     // Simulasi waktu loading
     await Future.delayed(const Duration(seconds: 2));
 
-    // Navigasi ke aplikasi utama
+    // Navigasi ke halaman utama (MyHomePage)
     Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (context) => const MyApp()),
+      MaterialPageRoute(builder: (context) => const MyHomePage(title: 'MONA')),
     );
   }
 
@@ -37,7 +37,17 @@ class _SplashScreenState extends State<SplashScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: Center(
-        child: Image.asset('assets/images/preloader.png'), // Ganti dengan path gambar preloader Anda
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: const [
+            CircularProgressIndicator(), // Indikator pemuatan
+            SizedBox(height: 20),
+            Text(
+              'Loading...',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
       ),
     );
   }

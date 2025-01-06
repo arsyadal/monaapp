@@ -4,6 +4,7 @@ import 'package:intl/intl.dart'; // Impor untuk NumberFormat
 import 'package:hive/hive.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:path_provider/path_provider.dart'; // Impor untuk path_provider
+import 'splash_screen.dart'; // Impor SplashScreen
 import 'accounts_page.dart'; // Impor AccountsPage
 import 'summary_page.dart'; // Impor SummaryPage
 
@@ -24,12 +25,24 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
+      title: 'MONA',
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-        useMaterial3: true,
+        primaryColor: Colors.red[900], // Warna utama merah pekat
+        colorScheme: ColorScheme.fromSwatch().copyWith(
+          primary: Colors.red[900], // Warna utama merah pekat
+          secondary: Colors.white, // Warna aksen putih
+        ),
+        appBarTheme: AppBarTheme(
+          backgroundColor: Colors.red[900], // Warna AppBar merah pekat
+          foregroundColor: Colors.white, // Warna teks AppBar putih
+        ),
+        buttonTheme: ButtonThemeData(
+          buttonColor: Colors.red[900], // Warna tombol merah pekat
+          textTheme: ButtonTextTheme.primary, // Warna teks tombol putih
+        ),
       ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+      home: const SplashScreen(), // Tampilkan SplashScreen terlebih dahulu
+      debugShowCheckedModeBanner: false, // Hilangkan banner debug
     );
   }
 }
@@ -44,7 +57,6 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
   int _selectedIndex = 0;
   final TextEditingController _dateController = TextEditingController();
   final TextEditingController _amountController = TextEditingController();
@@ -71,12 +83,6 @@ class _MyHomePageState extends State<MyHomePage> {
     _loadAccounts();
   }
 
-  void _incrementCounter() {
-    setState(() {
-      _counter++;
-    });
-  }
-
   void _onItemTapped(int index) {
     setState(() {
       _selectedIndex = index;
@@ -101,7 +107,7 @@ class _MyHomePageState extends State<MyHomePage> {
     final data = _transactionBox.values.toList();
     setState(() {
       _transactions.clear();
-      _transactions.addAll(data.cast<Map<String, String>>());
+      _transactions.addAll(data.map((item) => Map<String, String>.from(item as Map)));
       print(
           'Transactions loaded: $_transactions'); // Log untuk memastikan data dimuat
     });
@@ -110,6 +116,7 @@ class _MyHomePageState extends State<MyHomePage> {
   Future<void> _loadCategories() async {
     final data = _categoryBox.values.toList();
     setState(() {
+      _categories.clear();
       _categories.addAll(data.cast<String>());
       print(
           'Categories loaded: $_categories'); // Log untuk memastikan data dimuat
@@ -120,7 +127,7 @@ class _MyHomePageState extends State<MyHomePage> {
     final data = _accountBox.values.toList();
     setState(() {
       _accounts.clear();
-      _accounts.addAll(data.cast<Map<String, String>>().map((account) => account['type']!));
+      _accounts.addAll(data.map((item) => (item as Map)['type'] as String));
       print(
           'Accounts loaded: $_accounts'); // Log untuk memastikan data dimuat
     });
@@ -293,6 +300,18 @@ class _MyHomePageState extends State<MyHomePage> {
                     await _transactionBox.add(transaction);
                     print(
                         'Transaction saved: $transaction'); // Log untuk memastikan data disimpan
+
+                    // Update account balance if the transaction is an expense
+                    if (_transactionType == 'Expense') {
+                      final accountIndex = _accountBox.values.toList().indexWhere((account) => account['type'] == _accountController.text);
+                      if (accountIndex != -1) {
+                        final account = _accountBox.getAt(accountIndex);
+                        final newAmount = int.parse(account['amount']) - int.parse(_amountController.text.replaceAll(',', ''));
+                        account['amount'] = newAmount.toString();
+                        await _accountBox.putAt(accountIndex, account);
+                      }
+                    }
+
                     await _loadTransactions(); // Muat ulang data setelah menyimpan transaksi baru
                     Navigator.of(context).pop();
                   },
@@ -314,14 +333,18 @@ class _MyHomePageState extends State<MyHomePage> {
             final transaction = _transactions[index];
             final color =
                 transaction['type'] == 'Expense' ? Colors.red : Colors.green;
-            return ListTile(
-              title: Text(
-                '${transaction['type']} - ${transaction['amount']}',
-                style: TextStyle(color: color),
+            return Card(
+              margin: const EdgeInsets.all(10),
+              child: ListTile(
+                title: Text(
+                  '${transaction['type']} - ${transaction['amount']}',
+                  style: TextStyle(color: color),
+                ),
+                subtitle: Text(
+                  '${transaction['date']} - ${transaction['category']} - ${transaction['account']}',
+                ),
+                trailing: Text(transaction['note'] ?? ''),
               ),
-              subtitle: Text(
-                  '${transaction['date']} - ${transaction['category']} - ${transaction['account']}'),
-              trailing: Text(transaction['note'] ?? ''),
             );
           },
         );
@@ -338,14 +361,23 @@ class _MyHomePageState extends State<MyHomePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        title: Text(widget.title),
+        leading: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: SizedBox(
+            width: 40, // Atur lebar gambar
+            height: 40, // Atur tinggi gambar
+            child: Image.asset('assets/images/logo.png'), // Tambahkan gambar di bagian kiri AppBar
+          ),
+        ),
+        backgroundColor: Theme.of(context).colorScheme.primary,
+        title: Text(_selectedIndex == 0 ? 'Transactions' : _selectedIndex == 1 ? 'Accounts' : _selectedIndex == 2 ? 'Summary' : widget.title),
       ),
       body: _buildBody(),
       floatingActionButton: _selectedIndex == 0
           ? FloatingActionButton(
               onPressed: _showAddTransactionDialog,
               tooltip: 'Add Transaction',
+              backgroundColor: Colors.red[900], // Warna tombol plus merah pekat
               child: const Icon(Icons.add),
             )
           : null,
@@ -365,7 +397,7 @@ class _MyHomePageState extends State<MyHomePage> {
           ),
         ],
         currentIndex: _selectedIndex,
-        selectedItemColor: Colors.amber[800],
+        selectedItemColor: Colors.red[800],
         onTap: _onItemTapped,
       ),
     );
