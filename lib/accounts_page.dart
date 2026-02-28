@@ -26,10 +26,12 @@ class _AccountsPageState extends State<AccountsPage> {
   final List<String> _accountTypes = ['Bank', 'Cash'];
   final ApiService _apiService = ApiService();
 
+  final NumberFormat _numberFormat = NumberFormat('#,##0', 'en_US'); // Format untuk menambahkan koma setiap tiga angka
+
   @override
   void initState() {
     super.initState();
-    _loadAccounts();
+    _amountController.addListener(_formatAmount);
   }
 
   Future<void> _loadAccounts() async {
