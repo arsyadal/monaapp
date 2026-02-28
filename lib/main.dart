@@ -954,6 +954,7 @@ class _MyHomePageState extends State<MyHomePage> {
       body: _buildBody(),
       floatingActionButton: _selectedIndex == 0
           ? FloatingActionButton.extended(
+              heroTag: 'main_fab',
               onPressed: _showAddTransactionDialog,
               backgroundColor: kPrimary,
               foregroundColor: Colors.white,

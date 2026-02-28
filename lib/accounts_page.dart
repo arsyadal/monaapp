@@ -484,6 +484,7 @@ class _AccountsPageState extends State<AccountsPage> {
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
+        heroTag: 'accounts_fab',
         onPressed: _showAddAccountDialog,
         backgroundColor: kPrimary,
         foregroundColor: Colors.white,
